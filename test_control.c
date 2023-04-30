@@ -182,8 +182,9 @@ void ALU_Control(BIT* funct)
   RegWrite = multiplexor2(JumpReg, RegWrite, 0);
   ALUControl[3] = AluControl_Circuit0(funct);
   ALUControl[2] = not_gate(or_gate(AluControl_Circuit1(funct), ALUControl[3]));
+  ALUControl[3] = or_gate(AluControl_Circuit0(funct), LessCircuit(funct));
   ALUControl[1] = not_gate(or_gate(not_gate(ALUControl[2]), BinvertCircuit(funct)));
-  ALUControl[0] = LessCircuit(funct);
+  ALUControl[0] = 0;
   updateAluControl();
 }
 
@@ -364,8 +365,8 @@ int main(){
 
     assert(!ALUOp[1] && !ALUOp[0] && !MemToReg && RegDst && !ALUImm \
             && !Branch && !Jump && !Link && RegWrite && !MemWrite);
-    assert(ALUControl[0] && ALUControl[1] && \
-            ALUControl[2] && !ALUControl[3]);
+    assert(!ALUControl[0] && ALUControl[1] && \
+            ALUControl[2] && ALUControl[3]);
     assert(!JumpReg);
 
     printf("PASSED\n");
