@@ -707,7 +707,7 @@ void Extend_Sign16(BIT* Input, BIT* Output)
 
 void updateState()
 {
-  // TODO: Implement the full datapath here
+ // TODO: Implement the full datapath here
   // Essentially, you'll be figuring out the order in which to process each of 
   // the sub-circuits comprising the entire processor circuit. It makes it 
   // easier to consider the pipelined version of the process, and handle things
@@ -718,7 +718,83 @@ void updateState()
   // Memory - read/write data memory
   // Write Back - write to the register file
   // Update PC - determine the final PC value for the next instruction
+
+  //fetching from instruction
+  BIT instruction[32];
+  unsigned pc = binary_to_integer(PC);
+  Intruction_Memory(MEM_Instruction[pc], instruction);
+  BIT control_instruction[6];
+  int c = 0;
+  for (int i = 29; i < 32; i++){
+    control_instruction[c] = instruction[i];
+    c++;
+  }
+
+  //set control bits
+  Control(control_instruction);
+
+  //read from register file
+  c = 0;
+  BIT reg_bits1[5];
+  for (int i = 21; i < 26; i++){
+    reg_bits1[c] = instruction[i];
+    c++;
+  }
+  c = 0;
+  BIT reg_bits2[5];
+  for (int i = 16; i < 21; i++){
+    reg_bits2[c] = instruction[i];
+    c++;
+  }
+  BIT data1[32];
+  BIT data2[32];
+  Read_Register(reg_bits1, reg_bits2, data1, data2);
+
+
+  //ALU process
+  ALU_Control(instruction);
+  BIT extend[32];
+  Extend_Sign16(instruction, extend);
+  BIT option[32];
+  multiplexor2_32(ALUImm, data2, extend, option);
+  BIT zero[32];
+  BIT res[32];
+  ALU(ALUControl, data1, option, zero, res);
+  BIT res2[32];
+  Data_Memory(MemWrite, FALSE, res, res2, data2);
+  BIT write_reg[32];
+  BIT write_dat[32];
+
   
+  BIT sum[32];
+  adder32(PC, ONE, FALSE, sum);
+  BIT sum2[32];
+  adder32(sum, extend, FALSE, sum2);
+  BIT zero_branch[32] = and_gate(Branch, zero);
+  BIT sum3[32];
+  multiplexor2_32(zero_branch, sum, sum2, sum3);
+  BIT extend_and_reg1[32];
+  multiplexor2_32(JumpReg, extend, data1, extend_and_reg1);
+  BIT or_sel = or_gate(Jump, JumpReg);
+  BIT final_pc[32];
+  multiplexor2_32(or_sel, sum3, extend_and_reg1, final_pc);
+
+  c = 0;
+  BIT reg_bits3[5];
+  for (int i = 11; i < 16; i++){
+    reg_bits3[c] = instruction[i];
+    c++;
+  }
+  multiplexor2_32(RegDst, data2, reg_bits3, write_reg);
+  BIT write_reg_final;
+  multiplexor2_32(Link, write_reg, THIRTY_TWO,write_reg_final);
+  multiplexor2_32(MemToReg, res, res2,write_dat);
+  BIT write_dat_final;
+  multiplexor2_32(Link, write_dat, sum, write_dat_final);
+  Write_Register(RegWrite, write_reg_final, write_dat_final);
+  
+  copy_bits(final_pc, PC);
+
 }
 
 
