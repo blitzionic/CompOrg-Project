@@ -203,18 +203,14 @@ void multiplexor2_32(BIT S, BIT* I0, BIT* I1, BIT* Output)
 
 BIT multiplexor4(BIT S0, BIT S1, BIT I0, BIT I1, BIT I2, BIT I3)
 {
-  BIT x0 =FALSE; 
-  BIT x1 = FALSE; 
-  BIT x2 = FALSE; 
-  BIT x3 = FALSE;
   BIT S[] = {S0, S1};
   BIT O[] = {I0,I1,I2,I3};
   decoder2(S,TRUE, O);
   
-  BIT y0 = and_gate(x0, I0);
-  BIT y1 = and_gate(x1, I1);
-  BIT y2 = and_gate(x2, I2);
-  BIT y3 = and_gate(x3, I3);
+  BIT y0 = and_gate(O[0], I0);
+  BIT y1 = and_gate(O[1], I1);
+  BIT y2 = and_gate(O[2], I2);
+  BIT y3 = and_gate(O[3], I3);
   
   BIT z0 = or_gate(y0, y1);
   BIT z1 = or_gate(y2, y3);
@@ -240,12 +236,6 @@ void print_binary(BIT* A)
 
 void convert_to_binary_char(int a, char* A, int length)
 {
-  // TODO: perform conversion of integer to binary representation as char array
-  // This uses the same logic as your HW5 implementation. However, you're 
-  // converting to a character array instead of a BIT array.
-  // This might be useful in your get_instructions() function, if you use the
-  // same approach that I use. It also might not be needed if you directly
-  // convert the instructions to the proper BIT format.
   if (a >= 0) {
     for (int i = 0; i < length; ++i) {
       A[i] = (a % 2 == 1 ? '1' : '0');
@@ -305,7 +295,7 @@ void set_register(char* input, char* output)
     strncpy(output, "00100", 5);
   }
   if (strcmp(input, "t0") == 0) {
-    strncpy(output, "00010", 5);
+    strncpy(output, "00010", 5);//00010
   }
   else if(strcmp(input, "t1") == 0) {
     strncpy(output, "10010", 5);
@@ -328,25 +318,12 @@ void set_register(char* input, char* output)
 /* Parsing functions */
 /******************************************************************************/
 
-// TODO: Implement any helper functions to assist with parsing
 
 int get_instructions(BIT Instructions[][32])
 {
   char line[256] = {0};
   int instruction_count = 0;
   while (fgets(line, 256, stdin) != NULL) {        
-    // TODO: perform conversion of instructions to binary
-    // Input: coming from stdin via: ./a.out < input.txt
-    // Output: Convert instructions to binary in the instruction memory
-    // Return: Total number of instructions
-    // Note: you are free to use if-else and external libraries here
-    // Note: you don't need to implement circuits for saving to inst. mem.
-    // My approach:
-    // - Use sscanf on line to get strings for instruction and registers
-    // - Use instructions to determine op code, funct, and shamt fields
-    // - Convert immediate field and jump address field to binary
-    // - Use registers to get rt, rd, rs fields
-    // Note: I parse everything as strings, then convert to BIT array at end
     BIT t_output[32] = {FALSE};
     char inst[256] = {0};
     char op1[256] = {0};
@@ -382,8 +359,8 @@ int get_instructions(BIT Instructions[][32])
       set_register(op1, rt);
       set_register(op2, rs);
       strncpy(&output[0], imm, 16);
-      strncpy(&output[16], rt, 5);
-      strncpy(&output[21], rs, 5); 
+      strncpy(&output[16], rs, 5);
+      strncpy(&output[21], rt, 5); 
       strncpy(&output[26], "001000", 6);
     } else if(strcmp(inst, "addi") == 0) { //I-type
       convert_to_binary_char(atoi(op3), imm, 16);
@@ -437,12 +414,12 @@ int get_instructions(BIT Instructions[][32])
       set_register(op1, rd);
       set_register(op2, rs);
       set_register(op3, rt);
-      strncpy(&output[0], "000001", 6);
+      strncpy(&output[0], "010101", 6);
       strncpy(&output[6], "00000", 5);
       strncpy(&output[11], rd, 5);
       strncpy(&output[16], rt, 5);
       strncpy(&output[21], rs, 5);
-      strncpy(&output[26], "010101", 6); 
+      strncpy(&output[26], "000000", 6); 
     } else if (strcmp(inst, "j") == 0) { //J-type
       convert_to_binary_char(atoi(op1), address, 26);
       strncpy(&output[0], address, 26);
@@ -454,9 +431,10 @@ int get_instructions(BIT Instructions[][32])
     } else if(strcmp(inst, "jr") == 0) { //R-type
       set_register(op1, rs); 
       strncpy(&output[0], "000100", 6);
-      strncpy(&output[6], rs, 5);
+      strncpy(&output[6], "00000", 5);
       strncpy(&output[11], "000000000000000", 15);
-      strncpy(&output[26], "000100", 6);
+      strncpy(&output[21], rs, 5);
+      strncpy(&output[26], "000000", 6);
     } 
     // Convert 'output' char array to 't_output' BIT array
     for (int i = 0; i < 32; i++) {
@@ -515,13 +493,6 @@ void print_state()
     printf("%d ", binary_to_integer(MEM_Register[i]));
   } 
   printf("\n");
-  printf("Control Bits:\nRegDst: %d\nJump %d\nBranch: %d\n MemToReg: %d\n", \
-          RegDst, Jump, Branch, MemToReg);
-  printf("ALUOP %d%d\nMemWrite %d\nALUImm: %d\nRegWrite: %d\n", \
-         ALUOp[1], ALUOp[0], MemWrite, ALUImm, RegWrite);
-  printf("Zero %d\nLink %d\nJumpReg: %d\nALUControl: %d%d%d%d\n", \
-         Zero, Link, JumpReg, ALUControl[0], ALUControl[1], ALUControl[2], ALUControl[3]);
-  printf("+***********************************************************+\n\n");
 }
 
 
@@ -530,10 +501,6 @@ void print_state()
 /******************************************************************************/
 void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
 {
-  // TODO: Implement instruction memory
-  // Input: 32-bit instruction address
-  // Output: 32-bit binary instruction
-  // Note: Useful to use a 5-to-32 decoder here
   
   BIT Result1[32] = {FALSE};
   decoder5(ReadAddress, TRUE, Result1);
@@ -546,15 +513,7 @@ void Instruction_Memory(BIT* ReadAddress, BIT* Instruction)
 
 
 void Control(BIT* OpCode) {
-  // TODO: Set control bits for everything
-  // Input: opcode field from the instruction
-  // OUtput: all control lines get set 
-  // Note: Can use SOP or similar approaches to determine bits
-  printf("OPCODE\n");
-  for(int i=0; i<7; i++){
-      printf("%d", OpCode[6-i]);
-  }
-  printf("\n");
+
   MemToReg = MemToRegCircuit(OpCode);
   MemWrite = MemWriteCircuit(OpCode);
   Branch   = BranchCircuit(OpCode);
@@ -570,12 +529,6 @@ void Control(BIT* OpCode) {
 void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
   BIT* ReadData1, BIT* ReadData2)
 {
-  // TODO: Implement register read functionality
-  // Input: two 5-bit register addresses
-  // Output: the values of the specified registers in ReadData1 and ReadData2
-  // Note: Implementation will be very similar to instruction memory circuit
-  /*decoder5(ReadRegister1, TRUE, ReadData1);
-  decoder5(ReadRegister2, TRUE, ReadData2);*/
   BIT Result1[32] = {FALSE};
   decoder5(ReadRegister1, TRUE, Result1);
   for (int i = 0; i < 32; i++){
@@ -593,10 +546,6 @@ void Read_Register(BIT* ReadRegister1, BIT* ReadRegister2,
 
 void Write_Register(BIT RegWrite, BIT* WriteRegister, BIT* WriteData)
 {
-  // TODO: Implement register write functionality
-  // Input: one 5-bit register address, data to write, and control bit
-  // Output: None, but will modify register file
-  // Note: Implementation will again be similar to those above
   BIT Result[32] = {FALSE};
   decoder5(WriteRegister, RegWrite, Result);
   for (int i = 0; i < 32; i++){
@@ -623,17 +572,15 @@ void ALU_Control(BIT* funct)
   RegWrite = multiplexor2(JumpReg, RegWrite, 0);
   ALUControl[3] = AluControl_Circuit0(funct);
   ALUControl[2] = not_gate(or_gate(AluControl_Circuit1(funct), ALUControl[3]));
+  ALUControl[3] = or_gate(AluControl_Circuit0(funct), LessCircuit(funct));
   ALUControl[1] = not_gate(or_gate(not_gate(ALUControl[2]), BinvertCircuit(funct)));
-  ALUControl[0] = LessCircuit(funct);
+  ALUControl[0] = 0;
   updateAluControl();
 }
 
 void ALU1(BIT A, BIT B, BIT Ainvert, BIT Binvert, BIT CarryIn, BIT Less, 
 BIT Op0, BIT Op1, BIT* Result, BIT* CarryOut, BIT* Set, BIT* Zero)
 {
-  // TODO: implement a 1-bit ALU 
-  // Note: this will need modifications from Lab 5 to account for 'slt'
-  // See slide 30 in Chapter-3d
   
   BIT x0 = multiplexor2(Binvert, B, not_gate(B));
   BIT x1 = multiplexor2(Ainvert, A, not_gate(A));
@@ -654,9 +601,6 @@ BIT Op0, BIT Op1, BIT* Result, BIT* CarryOut, BIT* Set, BIT* Zero)
 void ALU32(BIT* A, BIT* B, BIT Ainvert, BIT Binvert, BIT CarryIn, 
   BIT Op0, BIT Op1, BIT* Result, BIT* CarryOut, BIT* Zero)
 {
-  // TODO: implement a 32-bit ALU
-  // You'll need to essentially implement a 32-bit ripple addder here
-  // See slide 31 in Chapter-3d
   BIT Less = FALSE;
   BIT Set = FALSE;
   ALU1(A[0], B[0], Ainvert, Binvert, CarryIn, Less, 
@@ -674,28 +618,15 @@ void ALU32(BIT* A, BIT* B, BIT Ainvert, BIT Binvert, BIT CarryIn,
 
 void ALU(BIT* ALUControl, BIT* Input1, BIT* Input2, BIT* Zero, BIT* Result)
 {   
-  // TODO: Implement 32-bit ALU
-  // Input: 4-bit ALUControl, two 32-bit inputs
-  // Output: 32-bit result, and zero flag big
-  // Note: Can re-use prior implementations (but need new circuitry for zero)
   BIT Carryout;
 
   ALU32(Input1,Input2,ALUControl[0], ALUControl[1], ALUControl[1], ALUControl[3],
     ALUControl[2], Result, &Carryout, Zero);
-
-  for (int i = 0; i < 32; i++){
-    Result[i] = multiplexor2(and_gate(ALUControl[3],ALUControl[2]),Input1[i],Result[i]);
-  }
-  
 }
 
 void Data_Memory(BIT MemWrite, BIT MemRead, 
   BIT* Address, BIT* WriteData, BIT* ReadData)
 {
-  // TODO: Implement data memory
-  // Input: 32-bit address, control flags for read/write, and data to write
-  // Output: data read if processing a lw instruction
-  // Note: Implementation similar as above
   BIT Result_read[32] = {FALSE};
   decoder5(Address, MemRead, Result_read);
   for (int i = 0; i < 32; i++){
@@ -712,8 +643,6 @@ void Data_Memory(BIT MemWrite, BIT MemRead,
 
 void Extend_Sign16(BIT* Input, BIT* Output)
 {
-  // TODO: Implement 16-bit to 32-bit sign extender
-  // Copy Input to Output, then extend 16th Input bit to 17-32 bits in Output
   for(int i = 0; i < 16; i++){
     Output[i] = Input[i];
   }
@@ -725,27 +654,12 @@ void Extend_Sign16(BIT* Input, BIT* Output)
 
 void updateState()
 {
- // TODO: Implement the full datapath here
-  // Essentially, you'll be figuring out the order in which to process each of 
-  // the sub-circuits comprising the entire processor circuit. It makes it 
-  // easier to consider the pipelined version of the process, and handle things
-  // in order of the pipeline. The stages and operations are:
-  // Fetch - load instruction from instruction memory
-  // Decode - set control bits and read from the register file
-  // Execute - process ALU
-  // Memory - read/write data memory
-  // Write Back - write to the register file
-  // Update PC - determine the final PC value for the next instruction
 
   //fetching from instruction
   BIT instruction[32] = {FALSE};
   Instruction_Memory(PC, instruction);
 
-  printf("INSTRUCTIOn IN UPDATESTATE\n");
-  for(int i=0; i<32; i++){
-      printf("%d", instruction[32-i-1]);
-  }
-  printf("\n");
+
   BIT control_instruction[6];
   int c = 0;
   for (int i = 26; i < 32; i++){
@@ -771,6 +685,7 @@ void updateState()
   }
   BIT data1[32] = {FALSE};
   BIT data2[32] = {FALSE};
+
   Read_Register(reg_bits1, reg_bits2, data1, data2);
 
 
@@ -783,22 +698,12 @@ void updateState()
   BIT zero = FALSE;
   BIT res[32] = {FALSE};
 
-  printf("DATA1\n");
-  print_binary(data1);
-  printf("\n");
-
-  printf("OPTION\n");
-  print_binary(option);
-  printf("\n");
   ALU(ALUControl, data1, option, &zero, res);
   BIT res2[32] = {FALSE};
   Data_Memory(MemWrite, TRUE , res, data2, res2);
   BIT write_reg[32] = {FALSE};
   BIT write_dat[32] = {FALSE};
 
-  printf("ALU DATA\n");
-  print_binary(res);
-  printf("\n");
 
   
   BIT sum[32] = {FALSE};
@@ -815,6 +720,8 @@ void updateState()
   BIT or_sel = or_gate(Jump, JumpReg);
 
   BIT final_pc[32];
+
+
   multiplexor2_32(or_sel, sum3, extend_and_reg1, final_pc);
 
   c = 0;
